@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte OpenStreetMap avec Firebase</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100%;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+        .color-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+        .blue { background: blue; }
+        .red { background: red; }
+        .green { background: green; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="legend">
+        <div class="color-option">
+            <div class="color-box blue"></div>Barrage
+        </div>
+        <div class="color-option">
+            <div class="color-box red"></div>Point dangereux à éviter
+        </div>
+        <div class="color-option">
+            <div class="color-box green"></div>Autre
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script type="module">
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCn2-NXMRlP-4Sv3b31TMaeZ-6YtjF24TM",
+            authDomain: "projet-nsi-2-65265.firebaseapp.com",
+            projectId: "projet-nsi-2-65265",
+            storageBucket: "projet-nsi-2-65265.appspot.com",
+            messagingSenderId: "661587731019",
+            appId: "1:661587731019:web:8d932ca013684430e863ce",
+            measurementId: "G-YNK2GWBQ4S"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        function initMap() {
+            const map = L.map('map').setView([-22.2758, 166.458], 10);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            loadMarkers(map);
+
+            map.on('click', function(e) {
+                const description = prompt("Entrez une description pour ce point :");
+                const color = prompt("Entrez une couleur pour ce point (rouge, vert, bleu) :").toLowerCase();
+                if (description && (color === 'rouge' || color === 'vert' || color === 'bleu')) {
+                    const marker = addMarker(e.latlng, description, color, map);
+                    saveMarker(e.latlng, description, color);
+                } else {
+                    alert("Veuillez entrer une couleur valide (rouge, vert, bleu).");
+                }
+            });
+        }
+
+        function addMarker(location, description, color, map) {
+            let colorCode;
+            switch (color) {
+                case 'rouge': colorCode = 'red'; break;
+                case 'vert': colorCode = 'green'; break;
+                case 'bleu': colorCode = 'blue'; break;
+            }
+            const marker = L.circleMarker(location, { color: colorCode, radius: 8 }).addTo(map)
+                .bindPopup(description).openPopup();
+            return marker;
+        }
+
+        async function saveMarker(location, description, color) {
+            try {
+                const docRef = await addDoc(collection(db, "markers"), {
+                    lat: location.lat,
+                    lng: location.lng,
+                    description: description,
+                    color: color
+                });
+                console.log("Marker added with ID: ", docRef.id);
+            } catch (e) {
+                console.error("Error adding marker: ", e);
+            }
+        }
+
+        async function loadMarkers(map) {
+            const querySnapshot = await getDocs(collection(db, "markers"));
+            querySnapshot.forEach((doc) => {
+                const marker = doc.data();
+                addMarker([marker.lat, marker.lng], marker.description, marker.color, map);
+            });
+        }
+
+        initMap();
+    </script>
+</body>
+</html>
