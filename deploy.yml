@@ -28,4 +28,3 @@ jobs:
       run: npm run deploy
       env:
         NODE_ENV: production
-        # Add other environment variables needed for deployment here
