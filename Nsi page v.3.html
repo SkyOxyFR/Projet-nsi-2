@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte OpenStreetMap avec Firebase</title>
+    <title>Carte OpenStreetMap avec Local Storage</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         #map {
-            height: 100%;
+            height: 100vh;
         }
         html, body {
             height: 100%;
@@ -23,6 +23,7 @@
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000; 
         }
         .color-option {
             display: flex;
@@ -55,22 +56,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCn2-NXMRlP-4Sv3b31TMaeZ-6YtjF24TM",
-            authDomain: "projet-nsi-2-65265.firebaseapp.com",
-            projectId: "projet-nsi-2-65265",
-            storageBucket: "projet-nsi-2-65265.appspot.com",
-            messagingSenderId: "661587731019",
-            appId: "1:661587731019:web:8d932ca013684430e863ce",
-            measurementId: "G-YNK2GWBQ4S"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    <script>
 
         function initMap() {
             const map = L.map('map').setView([-22.2758, 166.458], 10);
@@ -79,19 +65,20 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            loadMarkers(map);
+            loadMarkers(map); 
 
             map.on('click', function(e) {
                 const description = prompt("Entrez une description pour ce point :");
                 const color = prompt("Entrez une couleur pour ce point (rouge, vert, bleu) :").toLowerCase();
                 if (description && (color === 'rouge' || color === 'vert' || color === 'bleu')) {
                     const marker = addMarker(e.latlng, description, color, map);
-                    saveMarker(e.latlng, description, color);
+                    saveMarker(e.latlng, description, color); 
                 } else {
                     alert("Veuillez entrer une couleur valide (rouge, vert, bleu).");
                 }
             });
         }
+
 
         function addMarker(location, description, color, map) {
             let colorCode;
@@ -105,28 +92,26 @@
             return marker;
         }
 
-        async function saveMarker(location, description, color) {
-            try {
-                const docRef = await addDoc(collection(db, "markers"), {
-                    lat: location.lat,
-                    lng: location.lng,
-                    description: description,
-                    color: color
-                });
-                console.log("Marker added with ID: ", docRef.id);
-            } catch (e) {
-                console.error("Error adding marker: ", e);
-            }
+        function saveMarker(location, description, color) {
+            const markers = JSON.parse(localStorage.getItem('markers')) || []; 
+            markers.push({
+                lat: location.lat,
+                lng: location.lng,
+                description: description,
+                color: color
+            });
+            localStorage.setItem('markers', JSON.stringify(markers)); 
+            console.log("Marker added: ", { lat: location.lat, lng: location.lng, description, color });
         }
 
-        async function loadMarkers(map) {
-            const querySnapshot = await getDocs(collection(db, "markers"));
-            querySnapshot.forEach((doc) => {
-                const marker = doc.data();
+        function loadMarkers(map) {
+            const markers = JSON.parse(localStorage.getItem('markers')) || []; 
+            markers.forEach(marker => {
                 addMarker([marker.lat, marker.lng], marker.description, marker.color, map);
             });
         }
 
+        // Initialisation de la carte
         initMap();
     </script>
 </body>
